@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Panel</title>
+</head>
+<body>
+    <h1>Welcome to the Admin Panel</h1>
+    <h2>Connected Devices Statistics</h2>
+    <table>
+        <tr>
+            <th>IP Address</th>
+            <th>Model Name</th>
+        </tr>
+        {% for device in connected_devices %}
+            <tr>
+                <td>{{ device['ip_address'] }}</td>
+                <td>{{ device['model_name'] }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

@@ -1,0 +1,136 @@
+<!-- chat.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat App</title>
+    <style>
+        .username-and-time-container {
+            display: flex;
+            flex-direction: row;
+            align-items: flex-end;
+        }
+
+        .message {
+            font-size: 16px;
+        }
+
+        .timestamp {
+            font-size: 12px;
+            color: #777;
+            margin-left: 5px;
+        }
+        .username {
+            font-size: 16px;
+            color: darkblue;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chat App</h1>
+    
+    <div id="chat-container">
+        {% for message in messages %}
+            <div class="username-and-time-container">
+                <div class="username">{{ message['username'] }}</div>
+                <div class="timestamp">at {{ message['timestamp'] }}</div>
+            </div>
+            <div class="message">{{ message['message'] }}</div>
+        {% endfor %}
+    </div>
+    
+    <input type="text" id="message-input" placeholder="Type your message">
+    <button id="send-button">Send</button>
+
+    <div id="username-change">
+        <input type="text" id="username-input" placeholder="Change your username">
+        <button id="username-change-button">Change</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.2/socket.io.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const messageInput = document.getElementById('message-input');
+            const sendButton = document.getElementById('send-button');
+            const chatContainer = document.getElementById('chat-container');
+            const usernameInput = document.getElementById('username-input');
+            const usernameChangeButton = document.getElementById('username-change-button');
+
+            const socket = io.connect();
+
+            const maxCharacterLimit = 200; //Set the maximum character limit for the message input
+
+            let username = "{{ username }}";
+            if (!username) {
+                username = "{{ request.remote_addr }}";
+            }
+
+            function changeUsername(newUsername) {
+                username = newUsername;
+            }
+
+            usernameChangeButton.addEventListener('click', function () {
+                const newUsername = usernameInput.value;
+                if (newUsername.trim() !== '') {
+                    changeUsername(newUsername);
+                    fetch('/set_username', {
+                        method: 'POST',
+                        body: new URLSearchParams({ username: newUsername }),
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+                    })
+                        .then(response => response.text())
+                        .then(data => console.log(data))
+                        .catch(error => console.error('Error:', error));
+                    usernameInput.value = '';
+                }
+            });
+
+            sendButton.addEventListener('click', function () {
+                const messageText = messageInput.value;
+                if (messageText.length <= maxCharacterLimit) {
+                    if (messageText.trim() !== '') {
+                        socket.emit('message', { username: username, message: messageText });
+                        messageInput.value = '';
+                    }
+                }
+            });
+
+            messageInput.addEventListener('input', function (event) {
+                const messageText = messageInput.value;
+                if (messageText.length > maxCharacterLimit) {
+                    messageInput.value = messageText.slice(0, maxCharacterLimit);
+                }
+            });
+
+            messageInput.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    sendButton.click()
+                }
+            });
+
+            socket.on('message', function (data) {
+                const UsernameAndTimeContainer = document.createElement('div');
+                UsernameAndTimeContainer.className = 'username-and-time-container';
+
+                const usernameDiv = document.createElement('div');
+                usernameDiv.className = 'username';
+                usernameDiv.textContent = data['username'];
+                UsernameAndTimeContainer.appendChild(usernameDiv);
+
+                const timestampDiv = document.createElement('div');
+                timestampDiv.className = 'timestamp';
+                timestampDiv.textContent = ' at ' + data['timestamp'];
+                UsernameAndTimeContainer.appendChild(timestampDiv);
+
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message';
+                messageDiv.textContent = data['message'];
+                
+                chatContainer.appendChild(UsernameAndTimeContainer);
+                chatContainer.appendChild(messageDiv);
+
+                console.log('message sent');
+            });
+        });
+    </script>
+</body>
+</html>
